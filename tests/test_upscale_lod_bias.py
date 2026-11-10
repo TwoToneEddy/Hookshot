@@ -1,4 +1,4 @@
-"""The scene's texture LOD bias while NVIDIA DLSS or AMD FSR 3.1 scales it up (gpu/vk/upscale_lod_bias.h): the bias for each
+"""The scene's texture LOD bias while NVIDIA DLSS, AMD FSR 4 or AMD FSR 3.1 scales it up (gpu/vk/upscale_lod_bias.h): the bias for each
 scale, built as C++ and run, and that vk_draw.cpp gives it only to the scene's own mipmapped textures, as samplers of their
 own, without a draw keeping the descriptors of a draw with another bias. No game or GPU required.
 
@@ -28,7 +28,7 @@ def main():
     draw = (ROOT / "gpu" / "vk" / "vk_draw.cpp").read_text(encoding="utf-8")
     # which draws: the scene the upscaler last took, by the jitter's sizes (0 with no jitter: no bias without it)
     steps = function(draw, "int scene_lod_steps(const Targets& at) {")
-    for part in ('getenv("RX_VK_UPSCALE_LOD_BIAS")', "dlss_jitter_size(axis)", "fsr3_inputs::jitter_size(axis)",
+    for part in ('getenv("RX_VK_UPSCALE_LOD_BIAS")', "temporal_jitter_size(axis)", "fsr3_inputs::jitter_size(axis)",
                  "upscale_lod::steps(size(0), size(3), strength)", "at.width == seen.w && at.height == seen.h", "at.depth",
                  "at.color_format[0] == VK_FORMAT_B10G11R11_UFLOAT_PACK32"):
         if part not in steps:
@@ -59,7 +59,7 @@ def main():
     if "last_desc_lod_steps = draw_lod_steps" not in body[at:]:
         raise SystemExit("draw: the bias of the descriptors bound is not kept")
     # the upscalers say what they scale to
-    for name, start in (("vk_dlss.cpp", "uint32_t dlss_jitter_size(int axis) {"), ("vk_fsr3_inputs.cpp", "uint32_t jitter_size(int axis) {")):
+    for name, start in (("vk_temporal.cpp", "uint32_t temporal_jitter_size(int axis) {"), ("vk_fsr3_inputs.cpp", "uint32_t jitter_size(int axis) {")):
         source = (ROOT / "gpu" / "vk" / name).read_text(encoding="utf-8")
         if "if (axis == 3) return s.jitter_to_w" not in function(source, start) or "s.jitter_to_w = dw;" not in source:
             raise SystemExit("%s: the width the scene is scaled to is not given (axis 3)" % name)
