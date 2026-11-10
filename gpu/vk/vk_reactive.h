@@ -1,5 +1,6 @@
-// (hookshot) A reactive mask for the temporal upscalers, NVIDIA DLSS (vk_dlss.cpp) and AMD FSR 3.1 (vk_fsr3.cpp): where
-// the scene's transparent draws (water, smoke, fire, glows) changed it. They write no depth and have no motion of their own,
+// (hookshot) A reactive mask for the temporal upscalers, NVIDIA DLSS (vk_dlss.cpp) and AMD FSR 3.1 (vk_fsr3.cpp), not yet
+// AMD FSR 4 (vk_fsr4.cpp takes none: it runs as it does without RX_VK_REACTIVE): where the scene's transparent draws
+// (water, smoke, fire, glows) changed it. They write no depth and have no motion of their own,
 // so an upscaler takes them for the surface behind and smears or ghosts them; where the mask is set it leans on this frame
 // and not on its history.
 //

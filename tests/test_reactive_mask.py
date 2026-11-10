@@ -34,7 +34,7 @@ def main():
     hook = function(draw, "void reactive_scene_draw(VkCommandBuffer cmd, const Program& p, const NvnState& s, const Targets& at) {")
     if hook.index("if (!reactive::wanted()) return;") > hook.index("texture_frame_no()"):
         raise SystemExit("reactive_scene_draw: work is done for every draw before RX_VK_REACTIVE is asked")
-    for part in ("dlss_jitter_size(0)", "fsr3_inputs::jitter_size(0)", "at.width != seen.w || at.height != seen.h", "!at.depth",
+    for part in ("temporal_jitter_size(0)", "fsr3_inputs::jitter_size(0)", "upscaler_rows::is_fsr4(temporal_mode())", "at.width != seen.w || at.height != seen.h", "!at.depth",
                  "at.color_format[0] != VK_FORMAT_B10G11R11_UFLOAT_PACK32",
                  "reactive_policy::classify(target_write_mask(p, s, 0) != 0, (s.color.blend_en & 1) != 0, s.ds.dt != 0, s.ds.dw != 0)"):
         if part not in hook:
@@ -91,7 +91,7 @@ def main():
     dlss = (VK / "vk_dlss.cpp").read_text(encoding="utf-8")
     at = dlss.index("NVSDK_NGX_VK_DLSS_Eval_Params ep{};")
     ev = dlss[at:dlss.index("NGX_VULKAN_EVALUATE_DLSS_EXT(", at)]
-    if "reactive::mask(cmd, rw, rh, s.feature_rw, s.feature_rh, s.color.view, m)" not in ev or \
+    if "reactive::mask(cmd, f.render_w, f.render_h, f.color.width, f.color.height, f.color.view, m)" not in ev or \
             "ep.pInBiasCurrentColorMask = &bias;" not in ev:
         raise SystemExit("vk_dlss.cpp: DLSS's evaluation is not given the mask")
 
