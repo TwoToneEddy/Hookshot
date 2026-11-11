@@ -11,6 +11,11 @@ namespace mkwvk {
 /// Something other than the draw path pushed or bound descriptors in the recording (its next push is whole)
 void descriptors_disturbed();
 
+/// (hookshot) A temporal upscaler (vk_temporal.cpp's chain, vk_fsr3.cpp) scaled a 3D of this width up to a picture of that
+/// one: what the upscalers' texture LOD bias is at Auto, where the game's dynamic resolution sets the 3D's size
+/// (vk_draw.cpp upscale_lod_bias). Another step of it makes the samplers anew
+void upscale_lod_drew(uint32_t scene_width, uint32_t picture_width);
+
 /// A graphics pipeline as hookshot_pipelines.bin keeps it (the precompile's notes): what built it
 struct PipeNote {
     uint64_t key, prog, variant;
@@ -82,6 +87,9 @@ uint64_t ub_generation();
 void ub_thread_off();
 /// The pipeline cache to disk (force: whatever was built since the last save; else only after a few new ones)
 void pipeline_cache_save(bool force);
+// (the window closed: what play made since the last save, a few ms; the start's cache is not written there, as before)
+void pipeline_cache_close();
+void pipeline_cache_play();   // (the start-up done: what play makes goes into play files of its own)
 
 /// The stream's uniform updates (UPDATE_UB, vk_replay.cpp) that overlap [addr, addr + n) and may not be in guest
 /// memory yet when the GPU reads it: a copy of the range with them applied, at the offset alloc returns in the
