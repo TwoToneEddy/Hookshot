@@ -2317,8 +2317,10 @@ float upscale_lod_bias() {
     if (share <= 0) return upscale_lod::bias(upscale_lod_auto_steps.load());   // (Auto: what was measured)
     return std::min(0.0f, std::log2((float)share / 7500.0f));
 }
+}  // namespace (upscale_lod_drew is vk_draw.h's: vk_temporal.cpp and vk_fsr3.cpp call it, so it is not in the anonymous one)
 void upscale_lod_drew(uint32_t scene_width, uint32_t picture_width) {
-    const int steps = upscale_lod::steps(scene_width, picture_width);
+    // (from the steps it has: a size at the edge of two steps keeps the one it has, upscale_lod_bias.h)
+    const int steps = upscale_lod::steps(scene_width, picture_width, upscale_lod_auto_steps.load());
     if (upscale_lod_auto_steps.exchange(steps) == steps) return;
     // (after the steps are stored: a sampler made between the two is made anew, never kept with the bias from before)
     samplers_changed();
@@ -2327,6 +2329,7 @@ void upscale_lod_drew(uint32_t scene_width, uint32_t picture_width) {
         logf("vk: upscaler LOD bias at Auto: %+.2f mip levels on the game's own (the 3D %u wide, scaled to %u)",
              (double)upscale_lod::bias(steps), scene_width, picture_width);
 }
+namespace {
 /// compare: the shader reads depth with a reference (a sampler without one cannot compare)
 VkSampler sampler_make(int id, bool compare);
 // (each texture of each draw found its sampler through reg_mu, a copy of the registration, a hash of it and a map lookup:

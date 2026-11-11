@@ -5,6 +5,7 @@ when they change. No game or GPU required.
 python -I -B tests/test_upscale_lod_bias.py [--cxx g++]
 """
 import argparse
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -39,8 +40,22 @@ def main():
     # another measured step: stored first, then the samplers' generation moved (sampler_for reads the generation first)
     drew = function(draw, "void upscale_lod_drew(uint32_t scene_width, uint32_t picture_width) {")
     stored, moved = drew.find("upscale_lod_auto_steps.exchange(steps) == steps) return;"), drew.find("samplers_changed();")
-    if "upscale_lod::steps(scene_width, picture_width)" not in drew or not 0 <= stored < moved:
+    if "upscale_lod::steps(scene_width, picture_width, upscale_lod_auto_steps.load())" not in drew or not 0 <= stored < moved:
         raise SystemExit("upscale_lod_drew: a new step does not make the samplers anew after it is stored")
+    # the other files call it through vk_draw.h, so it is not in vk_draw.cpp's anonymous namespace (a file-local function
+    # of that name leaves theirs unresolved: the renderer does not link)
+    inside = 0
+    for line in draw[:draw.index("void upscale_lod_drew(uint32_t scene_width, uint32_t picture_width) {")].splitlines():
+        if line.startswith("namespace {"):
+            inside += 1
+        elif inside and re.match(r"\}\s*//\s*namespace\b(?!\s+\w)", line):
+            inside -= 1
+    if inside:
+        raise SystemExit("upscale_lod_drew: defined inside vk_draw.cpp's anonymous namespace (vk_temporal.cpp and vk_fsr3.cpp "
+                         "would not find it)")
+    header = (ROOT / "gpu" / "vk" / "vk_draw.h").read_text(encoding="utf-8")
+    if "void upscale_lod_drew(uint32_t scene_width, uint32_t picture_width);" not in header:
+        raise SystemExit("vk_draw.h: upscale_lod_drew is not declared")
     # both upscalers say what they drew
     for name, call in (("vk_temporal.cpp", "upscale_lod_drew(rw, dw);"), ("vk_fsr3.cpp", "upscale_lod_drew(f.width, ow);")):
         if call not in (ROOT / "gpu" / "vk" / name).read_text(encoding="utf-8"):

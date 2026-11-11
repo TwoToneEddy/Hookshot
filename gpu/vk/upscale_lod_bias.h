@@ -8,7 +8,8 @@
    drew from over the width it scaled to.
 
    That bias is kept in steps of a quarter level: the 3D's size moves from frame to frame, every bias is a sampler of its
-   own, and samplers are never destroyed (vk_draw.cpp sampler_make). */
+   own, and samplers are never destroyed (vk_draw.cpp sampler_make). A step is left only once the size is an eighth of a
+   level past its edge: another step makes every sampler anew, and a size that hovers at an edge would do so every frame. */
 #pragma once
 
 #include <algorithm>
@@ -27,6 +28,16 @@ inline int steps(uint32_t scene_width, uint32_t picture_width) {
     if (!scene_width || !picture_width) return 0;
     const float levels = std::log2(0.75f * (float)picture_width / (float)scene_width);
     return std::clamp((int)std::lround(levels * (float)kStepsPerLevel), 0, kMaxSteps);
+}
+
+/// The same from the steps there are now: they stay until the size is an eighth of a level past their edge (half a step
+/// past the half step where steps() rounds the other way), so a size that hovers between two steps keeps one. The bias is
+/// then at most a quarter level from the exact one, not an eighth
+inline int steps(uint32_t scene_width, uint32_t picture_width, int current) {
+    if (!scene_width || !picture_width) return 0;
+    current = std::clamp(current, 0, kMaxSteps);
+    const float exact = std::log2(0.75f * (float)picture_width / (float)scene_width) * (float)kStepsPerLevel;
+    return std::fabs(exact - (float)current) < 1.0f ? current : steps(scene_width, picture_width);
 }
 
 /// The steps as a sampler's bias, in mip levels: negative, toward the larger mips
